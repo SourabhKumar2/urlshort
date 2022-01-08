@@ -34,6 +34,24 @@ func TestParseYaml(t *testing.T) {
 		}
 	})
 }
+func TestParseJson(t *testing.T) {
+	json := fmt.Sprintf(`[ 
+	{
+		"path": "%s",
+		"url": "%s"
+	}
+]`, path, dest)
+	t.Run("valid json", func(t *testing.T) {
+		parsedJson, err := parseJson([]byte(json))
+
+		if err != nil {
+			t.Error(err)
+		}
+		if parsedJson[0].Path != path {
+			t.Errorf("expected path %v but got %v", path, parsedJson[0].Path)
+		}
+	})
+}
 
 func TestParseInvalidYaml(t *testing.T) {
 	yaml := `
@@ -95,6 +113,28 @@ func TestYAMLHandler(t *testing.T) {
 
 	t.Run("it redirects for found url", func(t *testing.T) {
 		result := runReaderHandler(YAMLHandler, yaml, path)
+
+		assertStatus(t, result, http.StatusFound)
+		assertURL(t, result, dest)
+	})
+}
+
+func TestJSONHandler(t *testing.T) {
+	json := fmt.Sprintf(`[ 
+	{
+		"path": "%s",
+		"url": "%s"
+	}
+]`, path, dest)
+
+	t.Run("it uses the fallback for unknown routes", func(t *testing.T) {
+		result := runReaderHandler(JSONHandler, json, "/unknown")
+
+		assertBody(t, result, fallbackResponse)
+	})
+
+	t.Run("it redirects for found url", func(t *testing.T) {
+		result := runReaderHandler(JSONHandler, json, path)
 
 		assertStatus(t, result, http.StatusFound)
 		assertURL(t, result, dest)
